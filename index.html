@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Baltic Crew Exchange — Industrial Crew Capacity</title>
+  <meta name="description" content="A pre-launch B2B platform for temporary company-owned crew capacity across construction, industry, energy, ship repair and technical inspection.">
+  <meta name="theme-color" content="#08263b">
+  <meta property="og:title" content="Baltic Crew Exchange">
+  <meta property="og:description" content="Industrial crews, available when your project needs them.">
+  <meta property="og:type" content="website">
+  <style>
+    :root {
+      --navy:#08263b; --navy-2:#123b55; --cyan:#08a7c7; --cyan-2:#dff7fb;
+      --sky:#f2f8fb; --white:#fff; --ink:#15334a; --muted:#60788b;
+      --line:#d9e7ee; --green:#17835f; --shadow:0 16px 50px rgba(8,38,59,.09);
+      --radius:22px; --max:1180px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;color:var(--ink);background:var(--white);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.55}
+    a{color:inherit}
+    button,select{font:inherit}
+    .container{width:min(var(--max),calc(100% - 40px));margin-inline:auto}
+    .header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+    .nav{height:78px;display:flex;align-items:center;justify-content:space-between;gap:28px}
+    .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--navy);font-weight:800;letter-spacing:-.02em}
+    .mark{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:var(--navy);color:#fff;box-shadow:inset 0 -4px 0 var(--cyan);font-size:15px;letter-spacing:.05em}
+    .brand-text{line-height:1.05}.brand-text small{display:block;margin-top:5px;color:#6f8395;font-size:11px;letter-spacing:.2em}
+    .links{display:flex;align-items:center;gap:28px}
+    .links a{text-decoration:none;color:#425e72;font-weight:650;font-size:14px}
+    .links a:hover{color:var(--cyan)}
+    .actions{display:flex;align-items:center;gap:12px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:46px;padding:0 20px;border-radius:13px;border:1px solid transparent;text-decoration:none;font-weight:750;cursor:pointer;transition:.2s}
+    .btn:hover{transform:translateY(-1px)}
+    .btn-primary{background:var(--navy);color:#fff;box-shadow:0 9px 24px rgba(8,38,59,.18)}
+    .btn-primary:hover{background:var(--navy-2)}
+    .btn-secondary{border-color:var(--line);background:#fff;color:var(--navy)}
+    .menu{display:none;border:0;background:transparent;color:var(--navy);font-size:25px}
+    .hero{background:linear-gradient(145deg,#f5fbfd 0%,#edf6fb 62%,#fff 100%);padding:82px 0 68px;border-bottom:1px solid var(--line)}
+    .hero-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:68px;align-items:end}
+    .eyebrow{display:inline-flex;align-items:center;gap:9px;padding:8px 13px;border:1px solid #bce8f0;border-radius:999px;background:rgba(255,255,255,.86);color:#087991;font-size:13px;font-weight:800}
+    .eyebrow-dot{width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 0 5px rgba(8,167,199,.12)}
+    h1{max-width:760px;margin:26px 0 22px;color:var(--navy);font-size:clamp(45px,6.4vw,78px);line-height:1.04;letter-spacing:-.06em}
+    .hero-copy{font-size:19px;color:#536e82;max-width:500px;margin:0 0 28px}
+    .hero-actions{display:flex;gap:12px;flex-wrap:wrap}
+    .pilot-note{margin-top:18px;color:#688093;font-size:13px}
+    .stat-panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:26px}
+    .stat-panel h2{font-size:18px;margin:0 0 8px;color:var(--navy)}
+    .stat-panel>p{font-size:14px;color:var(--muted);margin:0 0 22px}
+    .scope{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .scope div{padding:14px;border-radius:14px;background:var(--sky);border:1px solid #e5eff4;font-weight:700;font-size:13px}
+    .search-wrap{margin-top:38px;padding:18px;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+    .filters{display:grid;grid-template-columns:1.25fr 1fr 1fr auto;gap:10px}
+    .field label{display:block;margin:0 0 6px;color:#6a8192;font-weight:800;font-size:10px;letter-spacing:.11em;text-transform:uppercase}
+    .field select{width:100%;height:48px;border:1px solid #dbe7ed;background:#f4f8fa;color:var(--navy);border-radius:12px;padding:0 13px;font-weight:650}
+    .search-btn{align-self:end;height:48px;border:0;border-radius:12px;padding:0 22px;background:var(--cyan);color:#fff;font-weight:800;cursor:pointer}
+    .search-meta{display:flex;justify-content:space-between;gap:20px;margin-top:13px;color:#738898;font-size:12px}
+    section{padding:88px 0}
+    .section-top{display:flex;align-items:end;justify-content:space-between;gap:30px;margin-bottom:34px}
+    .kicker{margin:0 0 9px;color:#07849c;font-size:12px;font-weight:850;letter-spacing:.14em;text-transform:uppercase}
+    h2{margin:0;color:var(--navy);font-size:clamp(32px,4vw,48px);line-height:1.1;letter-spacing:-.04em}
+    .section-copy{max-width:520px;margin:0;color:var(--muted)}
+    .industry-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}
+    .industry{padding:24px;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:0 8px 30px rgba(8,38,59,.05)}
+    .icon{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:var(--cyan-2);color:#077d95;font-weight:900}
+    .industry h3{margin:18px 0 8px;color:var(--navy);font-size:18px}
+    .industry p{margin:0;color:var(--muted);font-size:14px}
+    .demo{background:var(--sky)}
+    .demo-head{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:24px}
+    .demo-label{display:inline-block;padding:6px 9px;border-radius:999px;background:#fff0cf;color:#8a5d00;font-size:11px;font-weight:850;text-transform:uppercase;letter-spacing:.08em}
+    .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .crew-card{background:#fff;border:1px solid var(--line);border-top:4px solid var(--cyan);border-radius:17px;padding:21px;box-shadow:0 10px 30px rgba(8,38,59,.05)}
+    .crew-top{display:flex;justify-content:space-between;align-items:start;gap:14px}
+    .crew-card h3{margin:9px 0 4px;color:var(--navy);font-size:18px}
+    .crew-card p{margin:0;color:var(--muted);font-size:13px}
+    .count{min-width:54px;padding:8px;border-radius:13px;background:var(--sky);text-align:center;color:var(--navy);font-weight:850;font-size:18px}
+    .count small{display:block;font-size:9px;color:var(--muted);font-weight:700}
+    .tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px}
+    .tag{padding:6px 9px;border-radius:8px;background:#eef7fa;color:#286177;font-size:11px;font-weight:750}
+    .no-results{display:none;text-align:center;padding:35px;background:#fff;border:1px solid var(--line);border-radius:17px;color:var(--muted)}
+    .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+    .detail{padding:31px;border-radius:var(--radius);background:var(--navy);color:#d8e8f1}
+    .detail.alt{background:#eff8fb;color:var(--ink);border:1px solid var(--line)}
+    .detail h3{margin:0 0 10px;color:#fff;font-size:28px;letter-spacing:-.03em}
+    .detail.alt h3{color:var(--navy)}
+    .detail p{margin:0 0 22px;color:#aac1cf}.detail.alt p{color:var(--muted)}
+    .clean-list{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;margin:0;padding:0;list-style:none}
+    .clean-list li{position:relative;padding-left:18px;font-size:14px}
+    .clean-list li:before{content:"";position:absolute;left:0;top:.65em;width:7px;height:7px;border-radius:50%;background:var(--cyan)}
+    .method-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+    .method{padding:12px;border:1px solid #cfe4eb;background:#fff;border-radius:12px}
+    .method strong{display:block;color:var(--navy);font-size:15px}.method span{color:var(--muted);font-size:11px}
+    .flow-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+    .flow{border:1px solid var(--line);border-radius:var(--radius);padding:29px}
+    .flow h3{margin:0 0 22px;color:var(--navy);font-size:22px}
+    .steps{display:grid;gap:15px}
+    .step{display:grid;grid-template-columns:35px 1fr;gap:13px;align-items:start}
+    .num{display:grid;place-items:center;width:35px;height:35px;border-radius:11px;background:var(--cyan-2);color:#087b92;font-weight:900}
+    .step strong{display:block;color:var(--navy);margin-top:2px}.step span{font-size:13px;color:var(--muted)}
+    .compliance{background:#f7fafc}
+    .trust-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:32px}
+    .trust{padding:21px;background:#fff;border:1px solid var(--line);border-radius:16px}
+    .trust strong{display:block;margin:12px 0 7px;color:var(--navy)}.trust span{font-size:13px;color:var(--muted)}
+    .cta{padding:70px 0}
+    .cta-box{display:grid;grid-template-columns:1fr auto;gap:40px;align-items:center;padding:46px;border-radius:28px;background:linear-gradient(135deg,var(--navy),#0d415e);color:#fff;box-shadow:var(--shadow)}
+    .cta h2{color:#fff}.cta p{max-width:710px;margin:13px 0 0;color:#c7dce7}
+    .cta .btn{background:var(--cyan);color:#fff;min-height:54px;padding-inline:26px}
+    footer{padding:32px 0;border-top:1px solid var(--line);background:#fff}
+    .footer{display:flex;justify-content:space-between;gap:28px;align-items:center;color:#6b8192;font-size:12px}
+    .footer strong{color:var(--navy)}
+    @media (max-width:980px){
+      .links{display:none}.menu{display:block}.actions .btn-secondary{display:none}
+      .hero-grid,.detail-grid,.flow-grid,.cta-box{grid-template-columns:1fr}
+      .industry-grid,.trust-grid{grid-template-columns:1fr 1fr}
+      .cards{grid-template-columns:1fr 1fr}.filters{grid-template-columns:1fr 1fr}.search-btn{height:48px}
+      .cta-box{gap:25px}
+    }
+    @media (max-width:640px){
+      .container{width:min(100% - 26px,var(--max))}.nav{height:68px}.brand-text{font-size:14px}.brand-text small{font-size:9px}
+      .actions .btn{display:none}.hero{padding:55px 0 45px}.hero-grid{gap:30px}h1{font-size:45px}
+      .filters,.industry-grid,.cards,.trust-grid,.method-grid{grid-template-columns:1fr}
+      .scope{grid-template-columns:1fr 1fr}.section-top,.demo-head,.footer{align-items:start;flex-direction:column}
+      section{padding:65px 0}.clean-list{grid-template-columns:1fr}.cta-box{padding:30px}
+      .search-meta{flex-direction:column;gap:5px}
+    }
+  </style>
+</head>
+<body>
+<header class="header">
+  <div class="container nav">
+    <a class="brand" href="#top" aria-label="Baltic Crew Exchange home">
+      <span class="mark">BC</span><span class="brand-text">Baltic Crew<small>EXCHANGE</small></span>
+    </a>
+    <nav class="links" aria-label="Main navigation">
+      <a href="#crews">Find crews</a><a href="#industries">Industries</a><a href="#how">How it works</a><a href="#compliance">Compliance</a>
+    </nav>
+    <div class="actions">
+      <a class="btn btn-secondary survey-link" href="https://form.jotform.com/262565255897069" target="_blank" rel="noopener">List a crew</a>
+      <a class="btn btn-primary survey-link" href="https://form.jotform.com/262565255897069" target="_blank" rel="noopener">Request a crew <span>→</span></a>
+      <button class="menu" aria-label="Open navigation" onclick="document.querySelector('.links').classList.toggle('mobile-open')">☰</button>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+<section class="hero">
+  <div class="container">
+    <div class="hero-grid">
+      <div>
+        <span class="eyebrow"><span class="eyebrow-dot"></span> Closed pilot · Market validation in progress</span>
+        <h1>Industrial crews, available when your project needs them.</h1>
+        <p class="hero-copy">A pre-launch B2B platform for matching temporarily available company-owned Baltic crews with European projects — through direct cooperation between legal entities.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary survey-link" href="https://form.jotform.com/262565255897069" target="_blank" rel="noopener">Join the closed pilot →</a>
+          <a class="btn btn-secondary" href="#how">See how it works</a>
+        </div>
+        <p class="pilot-note">Research form available in Latvian, Lithuanian, Estonian, English and Russian.</p>
+      </div>
+      <aside class="stat-panel">
+        <h2>Built for Baltic contractors</h2>
+        <p>One place to declare capacity, discover project requirements and open a qualified B2B introduction.</p>
+        <div class="scope">
+          <div>Construction & Infrastructure</div><div>Industrial & Energy</div>
+          <div>Marine & Shipyard</div><div>NDT & Inspection</div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="search-wrap" aria-label="Demonstration crew search">
+      <div class="filters">
+        <div class="field"><label for="specialisation">Specialisation</label><select id="specialisation"><option value="all">All specialisations</option><option value="welding">Welders</option><option value="piping">Pipefitters</option><option value="mechanical">Mechanical fitters</option><option value="electrical">Electricians</option><option value="marine">Marine repair</option><option value="ndt">NDT inspectors</option></select></div>
+        <div class="field"><label for="industry">Industry</label><select id="industry"><option value="all">All industries</option><option value="construction">Construction</option><option value="industrial">Industrial & Energy</option><option value="marine">Marine & Shipyard</option><option value="ndt">NDT & Inspection</option></select></div>
+        <div class="field"><label for="country">Based in</label><select id="country"><option value="all">All Baltic countries</option><option value="lv">Latvia</option><option value="lt">Lithuania</option><option value="ee">Estonia</option></select></div>
+        <button class="search-btn" id="searchButton">Search demo</button>
+      </div>
+      <div class="search-meta"><span>Prototype search using clearly labelled example data</span><span>No employment or payroll relationship through the platform</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="industries">
+  <div class="container">
+    <div class="section-top">
+      <div><p class="kicker">Industry coverage</p><h2>Capacity across demanding project environments.</h2></div>
+      <p class="section-copy">The pilot is designed around contractor teams that stay employed and managed by their own company while working under a direct B2B service agreement.</p>
+    </div>
+    <div class="industry-grid">
+      <article class="industry"><span class="icon">CI</span><h3>Construction & Infrastructure</h3><p>Civil works, structural installation, utilities, roads and project-based site crews.</p></article>
+      <article class="industry"><span class="icon">IE</span><h3>Industrial & Energy</h3><p>Piping, welding, electrical, mechanical installation, shutdowns and maintenance.</p></article>
+      <article class="industry"><span class="icon">MS</span><h3>Marine & Shipyard</h3><p>Repair, overhaul, steel renewal, outfitting, riding squads and dry-dock teams.</p></article>
+      <article class="industry"><span class="icon">ND</span><h3>NDT & Technical Inspection</h3><p>Certified inspection capacity for industrial, energy, piping, steel and marine work.</p></article>
+    </div>
+  </div>
+</section>
+
+<section class="demo" id="crews">
+  <div class="container">
+    <div class="demo-head">
+      <div><p class="kicker">Prototype marketplace</p><h2>Example crew profiles.</h2></div>
+      <span class="demo-label">Demo data only</span>
+    </div>
+    <div class="cards" id="crewCards">
+      <article class="crew-card" data-specialisation="welding" data-industry="industrial" data-country="lv"><div class="crew-top"><div><span class="demo-label">Demo profile</span><h3>Industrial welders</h3><p>Latvia · shutdown and piping experience</p></div><div class="count">6<small>people</small></div></div><div class="tags"><span class="tag">EN 9606</span><span class="tag">TIG / MMA</span><span class="tag">Example availability</span></div></article>
+      <article class="crew-card" data-specialisation="piping" data-industry="industrial" data-country="lt"><div class="crew-top"><div><span class="demo-label">Demo profile</span><h3>Pipefitters</h3><p>Lithuania · process piping experience</p></div><div class="count">8<small>people</small></div></div><div class="tags"><span class="tag">Isometrics</span><span class="tag">Food / process</span><span class="tag">Example availability</span></div></article>
+      <article class="crew-card" data-specialisation="mechanical" data-industry="construction" data-country="ee"><div class="crew-top"><div><span class="demo-label">Demo profile</span><h3>Mechanical installers</h3><p>Estonia · equipment and steel installation</p></div><div class="count">5<small>people</small></div></div><div class="tags"><span class="tag">Installation</span><span class="tag">Steel structures</span><span class="tag">Example availability</span></div></article>
+      <article class="crew-card" data-specialisation="marine" data-industry="marine" data-country="lv"><div class="crew-top"><div><span class="demo-label">Demo profile</span><h3>Engine overhaul team</h3><p>Latvia · main and auxiliary engines</p></div><div class="count">4<small>people</small></div></div><div class="tags"><span class="tag">Overhaul</span><span class="tag">Shaft-line</span><span class="tag">Dry dock</span></div></article>
+      <article class="crew-card" data-specialisation="electrical" data-industry="marine" data-country="lt"><div class="crew-top"><div><span class="demo-label">Demo profile</span><h3>Marine electricians</h3><p>Lithuania · temporary repair capacity</p></div><div class="count">5<small>people</small></div></div><div class="tags"><span class="tag">Marine electrical</span><span class="tag">Outfitting</span><span class="tag">Riding squad</span></div></article>
+      <article class="crew-card" data-specialisation="ndt" data-industry="ndt" data-country="ee"><div class="crew-top"><div><span class="demo-label">Demo profile</span><h3>NDT inspection team</h3><p>Estonia · industrial and shipyard inspection</p></div><div class="count">3<small>people</small></div></div><div class="tags"><span class="tag">ISO 9712</span><span class="tag">UT / MT / PT / VT</span><span class="tag">Level II</span></div></article>
+    </div>
+    <div class="no-results" id="noResults">No matching demo profiles. Try broader filters.</div>
+  </div>
+</section>
+
+<section>
+  <div class="container detail-grid">
+    <article class="detail">
+      <p class="kicker">Marine & Shipyard</p><h3>Teams for repair windows that cannot wait.</h3>
+      <p>Specialist company crews for temporary reinforcement during dry dock, port repair and riding projects.</p>
+      <ul class="clean-list"><li>Main and auxiliary engine overhaul</li><li>Propulsion and shaft-line works</li><li>Marine piping</li><li>Steel renewal and welding</li><li>Electrical works</li><li>Mechanical installation</li><li>Outfitting</li><li>Riding squads</li></ul>
+    </article>
+    <article class="detail alt">
+      <p class="kicker">NDT & Technical Inspection</p><h3>Qualified inspection capacity.</h3>
+      <p>Certification, method and sector experience can be reviewed before a mutual introduction.</p>
+      <div class="method-grid"><div class="method"><strong>UT</strong><span>Ultrasonic</span></div><div class="method"><strong>RT</strong><span>Radiographic</span></div><div class="method"><strong>MT</strong><span>Magnetic particle</span></div><div class="method"><strong>PT</strong><span>Penetrant</span></div><div class="method"><strong>VT</strong><span>Visual</span></div><div class="method"><strong>ET</strong><span>Eddy current</span></div></div>
+      <div class="tags"><span class="tag">ISO 9712 Level II / III</span><span class="tag">PED</span><span class="tag">EN</span><span class="tag">ASME experience</span></div>
+    </article>
+  </div>
+</section>
+
+<section id="how">
+  <div class="container">
+    <div class="section-top"><div><p class="kicker">How it works</p><h2>Two sides. One controlled introduction.</h2></div><p class="section-copy">The pilot tests a structured path from unused capacity or urgent demand to a direct company-to-company agreement.</p></div>
+    <div class="flow-grid">
+      <article class="flow"><h3>For crew providers</h3><div class="steps">
+        <div class="step"><span class="num">1</span><div><strong>Declare available capacity</strong><span>Skills, crew size, dates, geography and documents.</span></div></div>
+        <div class="step"><span class="num">2</span><div><strong>Receive relevant requests</strong><span>Review project scope before revealing company identity.</span></div></div>
+        <div class="step"><span class="num">3</span><div><strong>Approve contact disclosure</strong><span>Both sides confirm mutual interest.</span></div></div>
+        <div class="step"><span class="num">4</span><div><strong>Sign a direct B2B contract</strong><span>Your company remains responsible for its own employees.</span></div></div>
+      </div></article>
+      <article class="flow"><h3>For project companies</h3><div class="steps">
+        <div class="step"><span class="num">1</span><div><strong>Submit a requirement</strong><span>Scope, location, dates, standards and crew size.</span></div></div>
+        <div class="step"><span class="num">2</span><div><strong>Receive a qualified shortlist</strong><span>Compare relevant capacity without public contact details.</span></div></div>
+        <div class="step"><span class="num">3</span><div><strong>Request an introduction</strong><span>The provider approves disclosure before direct contact.</span></div></div>
+        <div class="step"><span class="num">4</span><div><strong>Sign a direct B2B contract</strong><span>Commercial and project terms stay between both companies.</span></div></div>
+      </div></article>
+    </div>
+  </div>
+</section>
+
+<section class="compliance" id="compliance">
+  <div class="container">
+    <div class="section-top"><div><p class="kicker">Compliance & trust</p><h2>Designed around accountable companies.</h2></div><p class="section-copy">Pilot checks and requirements will be refined with participating contractors. The platform does not replace project-specific legal, tax or safety review.</p></div>
+    <div class="trust-grid">
+      <div class="trust"><span class="icon">B2B</span><strong>Legal entities only</strong><span>The intended model connects companies rather than individual workers.</span></div>
+      <div class="trust"><span class="icon">HR</span><strong>Employer responsibility</strong><span>The provider remains responsible for its employees and employment obligations.</span></div>
+      <div class="trust"><span class="icon">↔</span><strong>Mutual disclosure</strong><span>Contact details are intended to be shared only after both sides show interest.</span></div>
+      <div class="trust"><span class="icon">✓</span><strong>Project-specific checks</strong><span>Documents, certificates, insurance and sanctions may require review during the pilot.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="cta">
+  <div class="container cta-box">
+    <div><p class="kicker">Closed pilot research</p><h2>Help shape the platform before launch.</h2><p>The research form takes approximately 8–12 minutes and is available in Latvian, Lithuanian, Estonian, English and Russian.</p></div>
+    <a class="btn survey-link" href="https://form.jotform.com/262565255897069" target="_blank" rel="noopener">Join the closed pilot →</a>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="container footer">
+    <span><strong>Baltic Crew Exchange</strong> · Pre-launch B2B platform</span>
+    <span>Baltic Crew Exchange is currently in development. Participation in the research or closed pilot does not create any contractual obligation.</span>
+  </div>
+</footer>
+
+<script>
+  const button=document.getElementById('searchButton');
+  button.addEventListener('click',function(){
+    const s=document.getElementById('specialisation').value;
+    const i=document.getElementById('industry').value;
+    const c=document.getElementById('country').value;
+    let visible=0;
+    document.querySelectorAll('.crew-card').forEach(function(card){
+      const show=(s==='all'||card.dataset.specialisation===s)&&(i==='all'||card.dataset.industry===i)&&(c==='all'||card.dataset.country===c);
+      card.style.display=show?'block':'none';
+      if(show) visible++;
+    });
+    document.getElementById('noResults').style.display=visible?'none':'block';
+    document.getElementById('crews').scrollIntoView({behavior:'smooth'});
+  });
+</script>
+</body>
+</html>
