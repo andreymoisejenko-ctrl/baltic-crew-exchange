@@ -13,6 +13,7 @@ Production-oriented PHP/MySQL MVP for a managed two-sided B2B marketplace.
 - private company details separated from public listing data;
 - CSRF protection, honeypot and basic rate limiting;
 - responsive desktop/mobile interface.
+- privacy notice and founding pilot terms.
 
 ## Nano.lv deployment
 
