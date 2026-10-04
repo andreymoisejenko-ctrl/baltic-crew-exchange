@@ -28,14 +28,21 @@ if ($action === 'publish') {
     $stmt = $pdo->prepare('UPDATE listings SET status = ? WHERE id = ?');
     $stmt->execute([$status, $id]);
 } elseif ($action === 'save') {
-    $stmt = $pdo->prepare('UPDATE listings SET title=?, country=?, city=?, industry=?, specialisations=?, people_count=?, available_from=?, available_until=?, duration=?, certifications=?, languages=?, mobility=?, rate_info=?, accommodation=?, description=? WHERE id=?');
+    $stmt = $pdo->prepare('UPDATE listings SET title=?, country=?, city=?, industry=?, specialisations=?, people_count=?, available_from=?, available_until=?, duration=?, experience=?, certifications=?, languages=?, mobility=?, rate_info=?, accommodation=?, description=? WHERE id=?');
     $stmt->execute([
         post('title', 180), post('country', 100), post('city', 120) ?: null, post('industry', 100),
         post('specialisations', 1000), post('people_count', 5) ?: null, post('available_from', 10) ?: null,
-        post('available_until', 10) ?: null, post('duration', 120) ?: null, post('certifications', 2000) ?: null,
+        post('available_until', 10) ?: null, post('duration', 120) ?: null, post('experience', 3000) ?: null, post('certifications', 2000) ?: null,
         post('languages', 255) ?: null, post('mobility', 500) ?: null, post('rate_info', 255) ?: null,
         post('accommodation', 255) ?: null, post('description', 4000) ?: null, $id,
     ]);
+} elseif ($action === 'interest-status') {
+    $interestId = (int)post('interest_id', 20);
+    $interestStatus = post('interest_status', 20);
+    if (in_array($interestStatus, ['new', 'reviewing', 'introduced', 'closed', 'rejected'], true)) {
+        $stmt = $pdo->prepare('UPDATE interests SET status = ? WHERE id = ?');
+        $stmt->execute([$interestStatus, $interestId]);
+    }
 }
 
 header('Location: index.php?selected=' . $id);
