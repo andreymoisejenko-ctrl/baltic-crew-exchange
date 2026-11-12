@@ -1,0 +1,436 @@
+ backgrounds are derived from KITE_ASSETS and should not be duplicated as giant inline CSS.
+ root.querySelectorAll('.photo').forEach(el=>{el.style.removeProperty('background-image');el.classList.remove('loaded')});
+ root.querySelector('#photoLightbox')?.classList.remove('open');
+ root.querySelector('#photoLightbox img')?.removeAttribute('src');
+ root.querySelectorAll('#lightboxThumbs > *').forEach(el=>el.remove());
+ const video=root.querySelector('#estoniaVideo');if(video){video.removeAttribute('src');video.querySelector('source')?.setAttribute('src','media/haademeeste.mp4')}
+ root.querySelector('#estoniaEmpty')?.removeAttribute('style');
+ root.querySelectorAll('[style]').forEach(el=>{for(const key of ['--backdrop','--discipline','--img'])if(el.style?.getPropertyValue(key))el.style.removeProperty(key);if(el.matches('.btn-thumb'))el.style.removeProperty('background-image')});
+ root.querySelector('#kite-dynamic').textContent=JSON.stringify(copyDynamicState()).replace(/</g,'\\u003c');
+ // Assets are embedded. All text and ordering are already present in DOM snapshot.
+ return '<!doctype html>\n'+root.outerHTML;
+}
+$('#saveNow').onclick=()=>store(snapshot());
+$('#exportEditable').onclick=()=>{saveFile(new Blob([exportHTML(false)],{type:'text/html;charset=utf-8'}),'kaitsurfings-redigejams.html');setStatus('Редактируемый файл скачан.')};
+$('#exportPublic').onclick=()=>{saveFile(new Blob([exportHTML(true)],{type:'text/html;charset=utf-8'}),'kaitsurfings-publisks.html');setStatus('Файл для коллег скачан.')};
+$('#exportBackup').onclick=()=>saveFile(new Blob([JSON.stringify(snapshot(),null,2)],{type:'application/json'}),'kaitsurfings-rezerve.json');
+$('#importBackup').onclick=()=>$('#backupFile').click();
+$('#backupFile').onchange=async()=>{try{const file=$('#backupFile').files[0];if(!file)return;let data=JSON.parse(await file.text());applyData(data);scheduleSave();setStatus('Резервная копия восстановлена ✓')}catch(e){setStatus('Не получилось открыть копию: '+e.message)}$('#backupFile').value=''};
+// Preserve picture-level image links in interactive descriptions, no external browser libraries.
+(async()=>{applyDynamicState(JSON.parse($('#kite-dynamic').textContent||'{}'));if(document.documentElement.dataset.public!=='true'){let draft=await getDraft();if(draft)applyData(draft)}onSlideChange();})().catch(e=>setStatus(e.message));
+// Update sidebar when slides navigate using normal controls in presentation mode.
+['prev','next'].forEach(id=>$('#'+id).addEventListener('click',()=>setTimeout(onSlideChange,0)));
+
+
+// ---- V5 ACCESSIBLE EDITOR: edit all slide copy, each visual slot independently. ----
+function attachEditIds(slide){
+ const targets=slide.querySelectorAll('h1,h2,h3,p,.eyebrow,.pill,.tag,.spot-label,.number');
+ targets.forEach((el,i)=>{
+  if(el.id&&['windSpeed','kiteSize','gearLabel','windLabel','spotTitle','seasonTitle','windowLabel','gearDesc','spotDesc','windDesc','seasonDesc','windowDesc'].includes(el.id))return;
+  if(el.closest('.options,.meta,.controls'))return;
+  if(!el.dataset.editId)el.dataset.editId=slide.dataset.slideId+'-text-'+i;
+  if(document.body.classList.contains('editing'))el.contentEditable='true';
+ });
+ slide.addEventListener('input',e=>{if(e.target.closest('[data-edit-id]')){buildSlideList();scheduleSave()}});
+}
+function assignImageSlots(){
+ slides().forEach(s=>{
+  s.querySelectorAll('.photo,.discipline-card[data-photo-bg],.kit-card .img,.safety-visual,.btn-thumb').forEach((el,i)=>{
+   if(!el.dataset.slotId)el.dataset.slotId=s.dataset.slideId+'-img-'+i;
+  });
+  if(s.dataset.backdrop&&!s.dataset.slotId)s.dataset.slotId=s.dataset.slideId+'-backdrop';
+ });
+}
+assignImageSlots();
+const dynNames={gear:'Inventārs',spots:'Karte',seasons:'Gadalaiki',winds:'Vēja virzieni',win:'Vēja logs'};
+function copyDynamicState(){
+ const d=deck.dynamic;
+ return Object.fromEntries(Object.entries(d).map(([key,values])=>[key,JSON.parse(JSON.stringify(values))]));
+}
+function applyDynamicState(state){
+ if(!state||typeof state!=='object')return;
+ const d=deck.dynamic;
+ for(let [name,src] of Object.entries(state)){
+  if(!d[name]||!src)continue;
+  if(Array.isArray(d[name])&&Array.isArray(src)){
+   d[name].forEach((entry,i)=>{if(src[i]&&entry[0]===src[i][0])src[i].forEach((v,j)=>entry[j]=v)});
+  }else if(typeof d[name]==='object'){
+   for(let k of Object.keys(d[name]))if(Array.isArray(src[k]))src[k].forEach((v,i)=>d[name][k][i]=v);
+  }
+ }
+ // Only refresh currently chosen options; never change the current slide.
+ ['gear','wind','window','season'].forEach(k=>document.querySelector('.opt.selected[data-'+k+']')?.click());
+ const spot=document.querySelector('.opt.selected[data-spot]');if(spot)spot.click();
+}
+let activeImageSlot=null;
+function labelImage(el){
+ if(el.dataset.backdrop)return 'Фон слайда';
+ if(el.id==='gearPhoto')return 'Большая иллюстрация выбранного оборудования';
+ if(el.id==='seasonPhoto')return 'Сезонная фотография';
+ let heading=el.closest('.card,.kit-card')?.querySelector('h3')?.textContent||el.querySelector('strong')?.textContent||el.closest('[data-gear]')?.textContent||'';
+ if(el.classList.contains('btn-thumb'))return 'Миниатюра: '+el.closest('button')?.textContent.trim();
+ return heading.trim().slice(0,70)||'Картинка';
+}
+function currentImageSlots(){
+ const s=active();if(!s)return[];
+ const els=[...s.querySelectorAll('.photo,.discipline-card[data-photo-bg],.kit-card .img,.safety-visual,.btn-thumb')];
+ if(s.dataset.backdrop)els.unshift(s);
+ return els.filter(el=>el.dataset.img||el.dataset.photoBg||el.dataset.backdrop||el.dataset.thumbSrc);
+}
+function assetPath(el){return el.dataset.img||el.dataset.photoBg||el.dataset.backdrop||el.dataset.thumbSrc||''}
+function updateQuickEditor(){
+ if(!document.body.classList.contains('editing'))return;
+ const t=$('#quickTextFields'),i=$('#quickImageFields'),d=$('#dynamicTextFields'),s=active();if(!t||!i||!d||!s)return;
+ assignImageSlots();
+ t.replaceChildren();i.replaceChildren();d.replaceChildren();
+ const textEls=[...s.querySelectorAll('[data-edit-id]')].filter(el=>!el.closest('.options'));
+ let count=0;
+ for(const el of textEls){
+  const walk=document.createTreeWalker(el,NodeFilter.SHOW_TEXT),nodes=[];
+  while(walk.nextNode())if(walk.currentNode.nodeValue.trim())nodes.push(walk.currentNode);
+  for(const [nidx,node] of nodes.entries()){
+   if(count>=44)break;
+   const raw=node.nodeValue;
+   const wrap=document.createElement('div');wrap.className='edit-field';
+   const lab=document.createElement('label');lab.textContent=(el.classList.contains('eyebrow')?'Раздел':el.tagName.toUpperCase())+(nodes.length>1?' · часть '+(nidx+1):'');
+   const field=document.createElement(raw.trim().length>90?'textarea':'input');
+   if(field.tagName==='INPUT')field.type='text';else field.rows=2;
+   field.value=raw.trim();field.oninput=()=>{
+    const m=raw.match(/^\s*/)?.[0]||'',e=raw.match(/\s*$/)?.[0]||'';
+    node.nodeValue=m+field.value+e;
+    buildSlideList();scheduleSave();
+   };
+   wrap.append(lab,field);t.append(wrap);count++;
+  }
+ }
+ if(!count)t.innerHTML='<p class="editor-help">Этот слайд редактируется прямо на экране.</p>';
+ for(const el of currentImageSlots()){
+  const path=assetPath(el),src=albumSource(path),row=document.createElement('div');row.className='edit-item';
+  const img=document.createElement('img');img.alt='';img.src=src;
+  const label=document.createElement('div');label.className='edit-item-label';label.textContent=labelImage(el);
+  const button=document.createElement('button');button.type='button';button.textContent='Заменить';button.onclick=()=>{activeImageSlot=el;$('#quickImageInput').click()};
+  const fit=document.createElement('button');fit.type='button';fit.textContent=(el.dataset.fit==='contain'?'Целиком':'Обрезка');fit.title='Переключить режим кадрирования';fit.onclick=()=>{el.dataset.fit=el.dataset.fit==='contain'?'cover':'contain';fit.textContent=el.dataset.fit==='contain'?'Целиком':'Обрезка';scheduleSave();setStatus('Режим кадрирования изменён ✓')};
+   row.append(img,label,fit,button);i.append(row);
+ }
+ if(!i.childElementCount)i.innerHTML='<p class="editor-help">На этом слайде нет фотографий. Можешь добавить отдельный слайд с фото.</p>';
+ $('#deleteCustomSlide').style.display=s.dataset.customSlide==='1'?'block':'none';
+ const configs=[];
+ if(s.querySelector('#gearBtns'))Object.keys(deck.dynamic.gear).forEach(k=>configs.push(['gear',k,1,2,deck.dynamic.gear[k][0]]));
+ if(s.querySelector('#spotLayer'))deck.dynamic.spots.forEach((spot,index)=>configs.push(['spots',index,3,null,spot[0]]));
+ if(s.querySelector('[data-season]'))Object.keys(deck.dynamic.seasons).forEach(k=>configs.push(['seasons',k,1,2,k==='water'?'Ūdens':'Sniegs']));
+ if(s.querySelector('[data-wind]'))Object.keys(deck.dynamic.winds).forEach(k=>configs.push(['winds',k,0,1,k]));
+ if(s.querySelector('[data-window]'))Object.keys(deck.dynamic.win).forEach(k=>configs.push(['win',k,0,1,k]));
+ for(const [group,key,titleIdx,descIdx,caption] of configs){
+  const arr=deck.dynamic[group][key],block=document.createElement('div');block.className='edit-field';
+  const lab=document.createElement('label');lab.textContent=caption;
+  const inp=document.createElement('textarea');inp.rows=2;inp.value=arr[descIdx===null?titleIdx:descIdx]||'';
+  inp.oninput=()=>{arr[descIdx===null?titleIdx:descIdx]=inp.value;document.querySelector('.opt.selected[data-'+({gear:'gear',spots:'spot',seasons:'season',winds:'wind',win:'window'}[group])+']')?.click();scheduleSave()};
+  block.append(lab,inp);d.append(block);
+ }
+ if(!d.childElementCount)d.innerHTML='<p class="editor-help">Здесь нет дополнительных интерактивных подписей.</p>';
+}
+$('#quickImageInput').onchange=async()=>{
+ const input=$('#quickImageInput'),file=input.files?.[0];input.value='';const el=activeImageSlot;activeImageSlot=null;
+ if(!file||!el)return;
+ try{
+  const data=await resizeImage(file),slot=el.dataset.slotId||'new';
+  const key='custom/'+slot+'.webp';window.KITE_PHOTO_OVERRIDES[key]=data;
+  if(el.id==='gearPhoto'){
+    const k=document.querySelector('.opt.selected[data-gear]')?.dataset.gear||'kite';deck.dynamic.gear[k][2]=key;
+    const thumb=document.querySelector('.opt.selected[data-gear] .btn-thumb');if(thumb)thumb.dataset.thumbSrc=key;
+  }else if(el.id==='seasonPhoto'){
+    const k=document.querySelector('.opt.selected[data-season]')?.dataset.season||'water';deck.dynamic.seasons[k][3]=key;
+  }
+  if(el.classList.contains('photo'))el.dataset.img=key;
+  else if(el.dataset.backdrop)el.dataset.backdrop=key;
+  else if(el.classList.contains('btn-thumb'))el.dataset.thumbSrc=key;
+  else el.dataset.photoBg=key;
+  if(!albumKeys.includes(key))albumKeys.push(key);
+  document.querySelectorAll('.photo').forEach(deck.loadPhoto);deck.loadBackdrops();
+  updateQuickEditor();scheduleSave();setStatus('Изображение заменено ✓');
+ }catch(err){setStatus('Не получилось добавить фото: '+err.message)};
+};
+$('#addTextLine').onclick=()=>{
+ const s=active();if(!s)return;
+ const el=document.createElement('p');el.className='sub';el.textContent='Jauns teksts — maini šo frāzi.';
+ const base=s.querySelector('.bottom');if(base)base.before(el);else s.append(el);
+ attachEditIds(s);el.contentEditable='true';el.focus();updateQuickEditor();scheduleSave();
+};
+$('#addNewSlide').onclick=()=>{
+ const id='my-slide-'+Date.now();
+ const el=document.createElement('section');el.className='slide';el.dataset.slideId=id;el.dataset.customSlide='1';el.dataset.note='Jauns slaids. Šeit pievieno savas piezīmes.';
+ el.innerHTML='<div class="eyebrow">MANS SLAIDS</div><h2 class="heading">Jauns <span class="accent">slaids.</span></h2><div class="flex"><div class="half"><p class="quote">Uzraksti savu galveno domu.</p><p class="sub">Šeit vari pievienot stāstu vai paskaidrojumu.</p></div><div class="half photo"><strong>IEVIETO FOTO</strong><span>Atver redaktoru un izvēlies attēlu</span></div></div>';
+ const photo=el.querySelector('.photo');photo.dataset.img='custom/'+id+'-placeholder.webp';
+ active().after(el);attachEditIds(el);assignImageSlots();deck.render();
+ const visible=deck.getVisibleSlides();deck.go(visible.indexOf(el));onSlideChange();scheduleSave();
+};
+$('#deleteCustomSlide').onclick=()=>{
+ const s=active();if(s?.dataset.customSlide!=='1')return;
+ s.remove();deck.go(Math.max(0,deck.getVisibleSlides().indexOf(s)-1));deck.render();onSlideChange();scheduleSave();
+};
+// update side panel after any interaction and change of slide without modifying presentation scripts
+const oldOnSlideChange=onSlideChange;
+onSlideChange=function(){oldOnSlideChange();updateQuickEditor()};
+$('#closeEditor').addEventListener('click',()=>{document.activeElement?.blur?.()});
+$('#editorToggle').addEventListener('click',()=>setTimeout(updateQuickEditor,0));
+$('#prev').addEventListener('click',()=>setTimeout(updateQuickEditor,0));
+$('#next').addEventListener('click',()=>setTimeout(updateQuickEditor,0));
+// Clicking an interactive button refreshes editable descriptions, while the presentation remains interactive.
+document.addEventListener('click',e=>{if(e.target.closest('[data-gear],[data-spot],[data-season],[data-wind],[data-window]'))setTimeout(updateQuickEditor,0)});
+document.addEventListener('keydown',e=>{
+ if(document.body.classList.contains('editing')&&(e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){
+  e.preventDefault();$('#exportEditable').click();
+ }
+});
+
+// HÄÄDEMEESTE VIDEO: local MP4 upload, in-browser preview, and export as website ZIP.
+let estoniaFile=null, estoniaUrl=null;
+const videoEl=$('#estoniaVideo'), videoStatus=$('#editorVideoStatus'), videoSlide=document.querySelector('[data-slide-id="slide-estonia-video"]');
+const chooseVideo=$('#chooseEstoniaVideo'),videoInput=$('#editorVideoFile');
+chooseVideo.onclick=()=>videoInput.click();
+async function mediaDb(){let d=await db();return d}
+function setEstoniaVideo(file){
+  if(estoniaUrl)URL.revokeObjectURL(estoniaUrl);
+  estoniaFile=file||null;
+  if(file){
+    estoniaUrl=URL.createObjectURL(file);videoEl.pause();videoEl.src=estoniaUrl;videoEl.load();
+    videoSlide.dataset.hide='0';$('#estoniaEmpty').style.display='none';
+    videoStatus.textContent='✓ '+file.name+' ('+(file.size/1048576).toFixed(1)+' MB). Видео появится в ZIP рядом с HTML.';
+  }else{estoniaUrl=null;videoEl.pause();videoEl.removeAttribute('src');videoEl.querySelector('source')?.setAttribute('src','media/haademeeste.mp4');videoEl.load();
+    videoSlide.dataset.hide='1';$('#estoniaEmpty').style.display='flex';
+    videoStatus.textContent='Видео удалено. Слайд скрыт до новой загрузки.';
+  }
+  deck.render();onSlideChange();scheduleSave();
+}
+async function persistVideo(file){
+ let d=await mediaDb();await new Promise((resolve,reject)=>{let t=d.transaction('media','readwrite');t.objectStore('media').put(file,'haademeeste');t.oncomplete=resolve;t.onerror=()=>reject(t.error)});d.close();
+}
+async function loadPersistedVideo(){
+ try{let d=await mediaDb();let file=await new Promise((ok,fail)=>{let t=d.transaction('media','readonly');let q=t.objectStore('media').get('haademeeste');q.onsuccess=()=>ok(q.result);q.onerror=()=>fail(q.error)});d.close();if(file)setEstoniaVideo(file)}catch(err){videoStatus.textContent='Локальная память видео недоступна — можно выбрать файл повторно.'}
+}
+videoInput.onchange=async()=>{let file=videoInput.files?.[0];videoInput.value='';if(!file)return;
+ try{if(file.size>250*1024*1024){videoStatus.textContent='Файл больше 250 MB. Для публикации лучше сжать его до MP4 H.264.';return}
+ await persistVideo(file);setEstoniaVideo(file);if(/\.mov$/i.test(file.name))videoStatus.textContent+=' Внимание: MOV может не работать в браузере; рекомендован MP4 (H.264).';
+ }catch(err){setEstoniaVideo(file);videoStatus.textContent+=' Сохранение в браузере не удалось — экспортируй ZIP до закрытия вкладки.'}
+};
+$('#removeEstoniaVideo').onclick=async()=>{try{let d=await mediaDb();await new Promise((ok,fail)=>{let t=d.transaction('media','readwrite');t.objectStore('media').delete('haademeeste');t.oncomplete=ok;t.onerror=()=>fail(t.error)});d.close()}catch(e){}setEstoniaVideo(null)};
+videoEl.addEventListener('error',()=>{if(estoniaFile)videoStatus.textContent='Видео не воспроизводится. Конвертируй MOV/HEVC в MP4 H.264 + AAC.'});
+// A small, dependency-free ZIP writer (store method). MP4 is already compressed.
+const enc=new TextEncoder();
+const crcTable=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xedb88320^(c>>>1):c>>>1;crcTable[n]=c>>>0}
+function crc(bytes){let v=0xffffffff;for(let k=0;k<bytes.length;k++)v=crcTable[(v^bytes[k])&255]^(v>>>8);return(v^0xffffffff)>>>0}
+function zipStore(files){let offset=0,parts=[],central=[];
+ for(let f of files){const name=enc.encode(f.name);const bytes=f.data instanceof Uint8Array?f.data:enc.encode(f.data);let val=crc(bytes);
+  let h=new Uint8Array(30+name.length),dv=new DataView(h.buffer);dv.setUint32(0,0x04034b50,true);dv.setUint16(4,20,true);dv.setUint16(6,0x0800,true);dv.setUint16(8,0,true);
+  dv.setUint32(14,val,true);dv.setUint32(18,bytes.length,true);dv.setUint32(22,bytes.length,true);dv.setUint16(26,name.length,true);h.set(name,30);parts.push(h,bytes);
+  let c=new Uint8Array(46+name.length),dc=new DataView(c.buffer);dc.setUint32(0,0x02014b50,true);dc.setUint16(4,20,true);dc.setUint16(6,20,true);dc.setUint16(8,0x0800,true);dc.setUint16(10,0,true);dc.setUint32(16,val,true);dc.setUint32(20,bytes.length,true);dc.setUint32(24,bytes.length,true);dc.setUint16(28,name.length,true);dc.setUint32(42,offset,true);c.set(name,46);central.push(c);offset+=h.length+bytes.length;
+ }
+ const size=central.reduce((n,v)=>n+v.length,0),end=new Uint8Array(22),de=new DataView(end.buffer);de.setUint32(0,0x06054b50,true);de.setUint16(8,files.length,true);de.setUint16(10,files.length,true);de.setUint32(12,size,true);de.setUint32(16,offset,true);
+ return new Blob([...parts,...central,end],{type:'application/zip'});
+}
+$('#exportSiteZip').onclick=async()=>{
+ try{setStatus('Упаковываю сайт и видео…');let pack=[{name:'index.html',data:exportHTML(true)},
+ {name:'README.txt',data:'Kaitsērfings — tīmekļa prezentācija. Atveriet index.html pārlūkā. Ja pievienots video, tā fails atrodas media/haademeeste.mp4. Lai publicētu: augšupielādējiet visu ZIP saturu kā vienu vietni (Cloudflare Pages / Netlify).'}];
+ if(estoniaFile){pack.push({name:'media/haademeeste.mp4',data:new Uint8Array(await estoniaFile.arrayBuffer())})}
+ saveFile(zipStore(pack),'kaitsurfings-vietne-ar-video.zip');setStatus('Сайт ZIP скачан. '+(estoniaFile?'Видео включено ✓':'Видео ещё не добавлено.'));
+ }catch(err){setStatus('Ошибка ZIP: '+err.message)}
+};
+
+// Preserve photos and edits from a user's exported v6.1 HTML without restoring old slide order.
+const previousHtmlButton=document.getElementById('importPreviousHtml');
+const previousHtmlInput=document.getElementById('previousHtmlFile');
+if(previousHtmlButton&&previousHtmlInput){
+  previousHtmlButton.onclick=()=>previousHtmlInput.click();
+  previousHtmlInput.onchange=async()=>{
+    const f=previousHtmlInput.files?.[0];previousHtmlInput.value='';if(!f)return;
+    try{
+      const txt=await f.text();const oldDoc=new DOMParser().parseFromString(txt,'text/html');
+      if(!oldDoc.querySelector('section.slide'))throw Error('Это не файл презентации');
+      let importedTexts=0,importedPhotos=0;
+      let oldAssets={};
+      try{oldAssets=JSON.parse(oldDoc.querySelector('#kite-assets')?.textContent||'{}')}catch(e){}
+      // Preserve new assets, but allow carried-over personal/custom images.
+      for(const [path,uri] of Object.entries(oldAssets)){
+        if((path.startsWith('custom/')||!(path in window.KITE_ASSETS))&&typeof uri==='string')window.KITE_ASSETS[path]=uri;
+      }
+      const embed=document.getElementById('kite-assets');
+      if(embed)embed.textContent=JSON.stringify(window.KITE_ASSETS).replace(/</g,'\\u003c');
+      let ov={};try{ov=JSON.parse(oldDoc.querySelector('#photo-overrides')?.textContent||'{}')}catch(e){}
+      window.KITE_PHOTO_OVERRIDES={...window.KITE_PHOTO_OVERRIDES,...ov};
+      const oldSlides=new Map([...oldDoc.querySelectorAll('section.slide')].map(x=>[x.dataset.slideId,x]));
+      for(const currentSlide of slides()){
+        const previous=oldSlides.get(currentSlide.dataset.slideId);if(!previous)continue;
+        if(previous.dataset.note)currentSlide.dataset.note=previous.dataset.note;
+        // Keep new slide visibility for default content; restore explicit hides only.
+        if(previous.dataset.hide==='1'&&currentSlide.dataset.slideId!=='slide-18')currentSlide.dataset.hide='1';
+        const prevTexts=new Map([...previous.querySelectorAll('[data-edit-id]')].map(x=>[x.dataset.editId,x]));
+        for(const el of currentSlide.querySelectorAll('[data-edit-id]')){
+          const p=prevTexts.get(el.dataset.editId);if(!p)continue;
+          el.innerHTML=p.innerHTML;el.dataset.hidden=p.dataset.hidden||'0';importedTexts++;
+        }
+        const prevSlots=new Map([...previous.querySelectorAll('[data-slot-id]')].map(x=>[x.dataset.slotId,x]));
+        for(const el of currentSlide.querySelectorAll('[data-slot-id]')){
+          const p=prevSlots.get(el.dataset.slotId);if(!p)continue;
+          for(const attr of ['img','photoBg','thumbSrc','backdrop']){
+            if(p.dataset[attr]&&el.dataset[attr]!==p.dataset[attr]){el.dataset[attr]=p.dataset[attr];importedPhotos++}
+          }
+        }
+      }
+      // Keep any unchanged source paths with personal overrides from the previous version.
+      importedPhotos+=Object.keys(ov).length;
+      const newPhotoJson=document.getElementById('photo-overrides');
+      if(newPhotoJson)newPhotoJson.textContent=JSON.stringify(window.KITE_PHOTO_OVERRIDES).replace(/</g,'\\u003c');
+      const gearSlide=document.querySelector('[data-slide-id="slide-08"]');const safeSlide=document.querySelector('[data-slide-id="slide-18"]');
+      if(gearSlide&&safeSlide)gearSlide.after(safeSlide);
+      // Remove old photo background even if an older edit left it in the fifth slide.
+      const fifth=document.querySelector('[data-slide-id="slide-05"]');
+      if(fifth)fifth.querySelectorAll('.retro-item').forEach(x=>x.style.removeProperty('--dvd-photo'));
+      deck.loadBackdrops();document.querySelectorAll('.photo').forEach(deck.loadPhoto);
+      deck.render();onSlideChange();updateQuickEditor();scheduleSave();
+      setStatus('Импорт готов: '+importedTexts+' текстовых блоков, '+importedPhotos+' фото-настроек. Скачай обновлённый HTML после редактирования.');
+    }catch(err){setStatus('Не получилось импортировать HTML: '+err.message)}
+  };
+}
+
+window.kiteSaveBridge={exportHTML,snapshot,store,saveFile};
+if(document.documentElement.dataset.public!=='true')loadPersistedVideo();
+})();
+</script><script id="kite-editor-shortcut">
+document.addEventListener('keydown',function(e){
+ if((e.key==='e'||e.key==='E')&&!e.altKey&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&
+ !e.target.closest('input,textarea,[contenteditable="true"]')&&
+ document.documentElement.dataset.public!=='true'){
+   document.getElementById('editorToggle')?.click();
+ }
+});
+</script><style id="kite-editor-entry-style">
+html[data-editor-entry="true"] #editorToggle{background:#d8ff73;color:#06121d;border-color:#d8ff73;box-shadow:0 8px 24px #0006}
+html[data-editor-entry="true"] body.editing #editorPanel{outline:2px solid #d8ff7355;outline-offset:-2px}
+html[data-editor-entry="true"] #editorPanel::before{content:"✓ РЕДАКТОР АКТИВЕН";display:block;color:#d8ff73;padding:10px 20px 0;font-size:11px;font-weight:800;letter-spacing:.14em}
+</style>
+<script id="kite-editor-autorun">
+(function(){
+ function launch(){
+   if(document.documentElement.dataset.public==='true')return;
+   const trigger=document.getElementById('editorToggle');
+   if(trigger&&!document.body.classList.contains('editing'))trigger.click();
+   if(!document.body.classList.contains('editing')){
+     document.body.classList.add('editing');
+     document.querySelectorAll('[data-edit-id]').forEach(el=>el.setAttribute('contenteditable','true'));
+   }
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',launch,{once:true});
+ else launch();
+ window.addEventListener('load',function(){if(!document.body.classList.contains('editing'))launch()},{once:true});
+})();
+</script>
+<script id="kite-save-one-click-v64">
+(function(){
+ 'use strict';
+ if(document.documentElement.dataset.public==='true')return;
+ const bridge=window.kiteSaveBridge;
+ if(!bridge){console.error('Kite editor save bridge unavailable');return;}
+ const {exportHTML,snapshot,store,saveFile}=bridge;
+ const buttons=['quickSaveFile','quickSavePanel'].map(id=>document.getElementById(id));
+ const toast=document.getElementById('quickSaveToast');
+ let saveHandle=null, busy=false, toastTimer=null;
+ const DB_NAME='kiteHTMLSavedFiles';
+ const DB_STORE='files';
+ const DB_KEY='kitesurfing-current-editor';
+ function openHandleDB(){return new Promise((ok,fail)=>{
+   if(!window.indexedDB){fail(new Error('IndexedDB unsupported'));return}
+   const r=indexedDB.open(DB_NAME,1);
+   r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(DB_STORE))r.result.createObjectStore(DB_STORE)};
+   r.onsuccess=()=>ok(r.result);r.onerror=()=>fail(r.error);
+ });}
+ async function rememberHandle(handle){
+   try{const d=await openHandleDB();await new Promise((ok,fail)=>{
+      const t=d.transaction(DB_STORE,'readwrite');t.objectStore(DB_STORE).put(handle,DB_KEY);
+      t.oncomplete=ok;t.onerror=()=>fail(t.error);
+   });d.close();}catch(e){} 
+ }
+ async function restoreHandle(){
+   try{const d=await openHandleDB();const h=await new Promise((ok,fail)=>{
+       const q=d.transaction(DB_STORE,'readonly').objectStore(DB_STORE).get(DB_KEY);
+       q.onsuccess=()=>ok(q.result);q.onerror=()=>fail(q.error);
+   });d.close();if(h && h.kind==='file'){saveHandle=h;updateButtonLabel();}}
+   catch(e){}
+ }
+ function showMessage(message,warning=false){
+   toast.textContent=message;toast.style.borderColor=warning?'#ffb6a466':'#d8ff7366';
+   toast.classList.add('show');clearTimeout(toastTimer);
+   toastTimer=setTimeout(()=>toast.classList.remove('show'),4600);
+   const st=document.getElementById('editorStatus');if(st)st.textContent=message;
+ }
+ function updateButtonLabel(){
+   for(const b of buttons){if(!b)continue;
+     b.textContent=saveHandle?'💾 Сохранить':'💾 Сохранить';
+     b.title=saveHandle?('Сохранить изменения в файл '+saveHandle.name):'Сохранить редактируемый HTML на компьютер';
+   }
+ }
+ // Called synchronously by an explicit click. The picker is opened BEFORE any
+ // awaited operation so the browser does not lose transient user activation.
+ async function savePresentation(){
+   if(busy)return;
+   busy=true;for(const b of buttons){if(b)b.disabled=true}
+   let mode='download';
+   try{
+     let handle=saveHandle;
+     if(!handle && typeof window.showSaveFilePicker==='function'){
+       try{
+         handle=await window.showSaveFilePicker({
+            suggestedName:'Kaitserfings_mans_redaktors.html',
+            types:[{description:'Редактируемая HTML-презентация',accept:{'text/html':['.html']}}]
+         });
+         saveHandle=handle;updateButtonLabel();
+         // Do not wait for IndexedDB before writing; file permissions may be transient.
+         rememberHandle(handle);
+       }catch(err){
+         if(err && err.name==='AbortError'){showMessage('Сохранение отменено: файл не выбран.',true);return}
+         // Safari, in-app previews, policy-limited contexts: fall back to file download.
+         handle=null;
+       }
+     }
+     const html=exportHTML(false);
+     if(handle){
+       try{
+         const perm=typeof handle.queryPermission==='function'?await handle.queryPermission({mode:'readwrite'}):'granted';
+         if(perm!=='granted' && typeof handle.requestPermission==='function'){
+           const result=await handle.requestPermission({mode:'readwrite'});
+           if(result!=='granted'){showMessage('Доступ к файлу не разрешён. Выбери сохранение снова.',true);return}
+         }
+         const output=await handle.createWritable();
+         await output.write(html);
+         await output.close();
+         mode='disk';
+       }catch(e){
+         // Do NOT claim disk save if permission/write failed.
+         saveHandle=null;updateButtonLabel();
+         showMessage('Не удалось перезаписать файл; скачиваю новую HTML-копию.',true);
+       }
+     }
+     if(mode!=='disk'){
+       const data=new Blob([html],{type:'text/html;charset=utf-8'});
+       saveFile(data,'Kaitserfings_mans_redaktors.html');
+       mode='download';
+     }
+     // The editor's existing draft store is a useful extra backup, not the only save.
+     try{await store(snapshot())}catch(e){}
+     if(mode==='disk')showMessage('✓ Сохранено в «'+handle.name+'» — фотографии и тексты внутри HTML.');
+     else showMessage('✓ HTML скачан. Открой последний файл из папки «Загрузки» для продолжения.');
+   }catch(e){showMessage('Не удалось сохранить: '+(e?.message||String(e)),true)}
+   finally{busy=false;for(const b of buttons){if(b)b.disabled=false}}
+ }
+ for(const button of buttons){if(button)button.addEventListener('click',savePresentation)}
+ window.addEventListener('keydown',function(e){
+   if((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key.toLowerCase()==='s'){
+     e.preventDefault();e.stopImmediatePropagation();savePresentation();
+   }
+ },true);
+ // File System Access handles are restored when the file remains under the same browser origin.
+ restoreHandle();updateButtonLabel();
+})();
+</script>
+
+
+</body></html>
