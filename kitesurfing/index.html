@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="lv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>11 gadi, dzenoties pēc vēja — kaitsērfings</title>
+<style>html,body{margin:0;background:#06121d;color:#e5fcf9;font-family:Arial,sans-serif;height:100%}main{min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;text-align:center;padding:30px;box-sizing:border-box}.spinner{width:42px;height:42px;border:3px solid #284351;border-top-color:#59eddc;border-radius:50%;animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}h1{font-size:clamp(30px,4.5vw,65px);margin:0}p{color:#93b7bc}button{display:none;color:#041a24;border:0;border-radius:8px;background:#d8ff73;padding:12px 22px;cursor:pointer}#progress{font-size:12px;color:#59eddc}</style>
+</head><body><main><div class="spinner"></div><h1>11 gadi, dzenoties pēc vēja</h1><p id="status">Ielādē prezentāciju un fotogrāfijas…</p><span id="progress"></span><button id="retry" onclick="location.reload()">Mēģināt vēlreiz</button></main>
+<script>
+(async function(){
+const n=20;const parts=new Array(n);
+try{
+const pool=Array.from({length:Math.min(5,n)},async(_,worker)=>{
+for(let i=worker;i<n;i+=5){
+ const url="chunks/part-"+String(i).padStart(3,"0")+".txt";
+ let res=await fetch(url,{cache:"force-cache"});
+ if(!res.ok)throw Error(url+": HTTP "+res.status);
+ parts[i]=await res.text();
+ document.getElementById("progress").textContent=parts.filter(Boolean).length+" / "+n;
+}
+});await Promise.all(pool);
+const html=parts.join("");
+if(!html.startsWith("<!doctype html>")||!html.includes("1B_SFTJLZrs")||!html.includes("</body></html>"))throw Error("Prezentācijas fails nav pilnīgs.");
+document.open();document.write(html);document.close();
+}catch(e){document.getElementById("status").textContent="Neizdevās ielādēt: "+e.message;document.getElementById("retry").style.display="inline-block";console.error(e)}
+})();
+</script></body></html>
